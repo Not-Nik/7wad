@@ -21,11 +21,11 @@ int main() {
     SetTargetFPS(60);
 
     std::optional<Archive> openedArchive = {};
+    std::vector<std::string> files = {};
 
     int scroll = 0;
     int totalHeight = 0;
     bool scrollbar = false;
-    Vector2 scrollbarStart{0};
 
     while (!WindowShouldClose()) {
         if (IsFileDropped()) {
@@ -36,6 +36,13 @@ int main() {
             UnloadDroppedFiles(droppedFiles);    // Unload filepaths from memory
 
             totalHeight = openedArchive->files.size() * 35;
+
+            files.clear();
+            files.reserve(openedArchive->files.size());
+
+            for (auto [name, off]: openedArchive->files) {
+                files.push_back(name);
+            }
         }
 
         screenWidth = GetScreenWidth();
@@ -63,30 +70,25 @@ int main() {
                 }
             }
 
-            scroll += GetMouseWheelMoveV().y * 8;
+            scroll += (int) (GetMouseWheelMoveV().y * 35);
+
+            int size = files.size() - (int) (screenHeight / 35);
+
             if (scroll > 0) scroll = 0;
+            else if (scroll / 35 < -size)
+                scroll = -(size * 35);
 
             {
-                int height = scroll + 10;
-
                 int first_object = -scroll / 35;
+                int height = 10;
 
-                auto i = openedArchive->files.begin();
-
-                if (first_object > 0)
-                    std::advance(i, first_object);
-
-                for (auto [name, off]: openedArchive->files) {
-                    if (height < -35) {
-                        height += 35;
-                        continue;
-                    }
+                for (auto name = files.begin() + (int) first_object; name != files.end(); name++) {
                     if (mousePos.y > (float) height && mousePos.y < (float) height + 30 &&
                         mousePos.x < (float) screenWidth - 40) {
                         DrawRectangle(10, height, screenWidth - 40, 30, GRAY);
 
                         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                            fs::path file = name;
+                            fs::path file = *name;
                             std::string filename = file.filename().string();
                             std::string exten = std::string("*") + file.extension().string();
                             const char *patterns[] = {exten.c_str()};
@@ -95,12 +97,12 @@ int main() {
                                                                1, patterns,
                                                                nullptr);
                             if (path) {
-                                openedArchive->OpenFile(name)->WriteToDisk(path);
+                                openedArchive->OpenFile(*name)->WriteToDisk(path);
                             }
                         }
                     }
                     DrawRectangleLines(10, height, screenWidth - 40, 30, BLACK);
-                    DrawText(name.c_str(), 15, height + 5, 20, BLACK);
+                    DrawText(name->c_str(), 15, height + 5, 20, BLACK);
 
                     if (height > screenHeight) break;
 
@@ -119,13 +121,12 @@ int main() {
 
                 if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
                     if (scrollbar) {
-                        scroll = -(mousePos.y / screenHeight * totalHeight);
+                        scroll = (int) -(mousePos.y / (float) screenHeight * (float) totalHeight);
                     }
                     if (mousePos.x > (float) screenWidth - 40 &&
                         mousePos.y > (float) pos &&
                         mousePos.y < (float) pos + (float) height) {
                         scrollbar = true;
-                        scrollbarStart = mousePos;
                     }
                 } else {
                     scrollbar = false;
