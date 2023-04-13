@@ -12,6 +12,9 @@
 #include <ios>
 #include <string>
 #include <vector>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 class FileMetadata {
 public:
@@ -32,9 +35,7 @@ class File {
 public:
     typedef uint32_t streamoff;
 
-    void read(char *s, std::streamsize n);
-    void seekg(streamoff off) { data_ptr_ += off; }
-    void WriteToDisk(const std::string &filename) const;
+    void WriteToDisk(const fs::path &filename) const;
 
     File(FileMetadata md, std::vector<uint8_t> data);
 };

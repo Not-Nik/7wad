@@ -10,12 +10,9 @@
 #define WAD7_SRC_WAD_ARCHIVE_H_
 
 #include <map>
-#include <vector>
 #include <fstream>
 #include <utility>
 #include <optional>
-#include <filesystem>
-#include <unordered_map>
 
 #include "File.h"
 
@@ -28,12 +25,12 @@ class Archive {
 public:
     uint32_t version = 0;
     /// Offsets for each file in the archive
-    std::map<std::string, std::streamoff> files{};
+    std::map<std::string, std::ifstream::pos_type> files{};
 
-    FileMetadata ReadMetadata(std::streamoff descriptor_offset);
+    FileMetadata ReadMetadata(std::ifstream::pos_type descriptor_offset);
     std::vector<uint8_t> ReadFile(const FileMetadata& metadata);
 
-    Archive(fs::path archive_path);
+    Archive(const fs::path& archive_path);
 
     static std::optional<Archive> Open(const std::string &archive_path);
 

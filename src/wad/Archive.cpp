@@ -16,8 +16,10 @@
 #define DEBUG(...) std::cout << __VA_ARGS__ << std::endl
 #define ERROR(...) std::cerr << __VA_ARGS__ << std::endl
 
-Archive::Archive(fs::path ap)
-    : archive_file(ap) {
+Archive::Archive(const fs::path &ap)
+        : archive_file(ap, std::ios_base::binary) {
+    archive_file.exceptions(std::ios_base::badbit | std::ios_base::failbit);
+
     DEBUG("Opening KIWAD archive at " << ap);
 
     std::string magic = ReadString(5);
@@ -36,7 +38,7 @@ Archive::Archive(fs::path ap)
     }
 
     for (uint32_t i = 0; i < file_count; i++) {
-        std::streamoff file_start = archive_file.tellg();
+        std::ifstream::pos_type file_start = archive_file.tellg();
         // skip offset (4B), uncompressed size (4B), compressed size (4B), compressed? (1B), checksum (4B)
         archive_file.seekg(0x11, std::ios_base::cur);
         auto file_name_len = Read<uint32_t>();
@@ -49,7 +51,7 @@ Archive::Archive(fs::path ap)
     DEBUG("Indexed " << files.size() << " files");
 }
 
-FileMetadata Archive::ReadMetadata(std::streamoff descriptor_offset) {
+FileMetadata Archive::ReadMetadata(std::ifstream::pos_type descriptor_offset) {
     archive_file.seekg(descriptor_offset, std::ios_base::beg);
 
     auto offset = Read<uint32_t>();
@@ -62,11 +64,11 @@ FileMetadata Archive::ReadMetadata(std::streamoff descriptor_offset) {
     file_name.pop_back(); // Null terminator
 
     return FileMetadata{
-        .data_offset = offset, .uncompressed_size = size_uncompressed, .compressed_size = size_compressed, .checksum = checksum, .is_compressed = is_compressed, .name = file_name
+            .data_offset = offset, .uncompressed_size = size_uncompressed, .compressed_size = size_compressed, .checksum = checksum, .is_compressed = is_compressed, .name = file_name
     };
 }
 
-std::vector<uint8_t> Archive::ReadFile(const FileMetadata& metadata) {
+std::vector<uint8_t> Archive::ReadFile(const FileMetadata &metadata) {
     archive_file.seekg(metadata.data_offset, std::ios_base::beg);
 
     std::vector<uint8_t> data;

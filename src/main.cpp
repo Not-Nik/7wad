@@ -7,6 +7,7 @@
  */
 
 #include <raylib.h>
+#include <tinyfiledialogs.h>
 
 #include "wad/Archive.h"
 #include "wad/File.h"
@@ -19,17 +20,22 @@ int main() {
     InitWindow(screenWidth, screenHeight, "7wad");
     SetTargetFPS(60);
 
-    std::optional<Archive> opened_archive = {};
+    std::optional<Archive> openedArchive = {};
 
     int scroll = 0;
+    int totalHeight = 0;
+    bool scrollbar = false;
+    Vector2 scrollbarStart{0};
 
     while (!WindowShouldClose()) {
         if (IsFileDropped()) {
             FilePathList droppedFiles = LoadDroppedFiles();
 
-            opened_archive = Archive(std::string(droppedFiles.paths[0]));
+            openedArchive = Archive(std::string(droppedFiles.paths[0]));
 
             UnloadDroppedFiles(droppedFiles);    // Unload filepaths from memory
+
+            totalHeight = openedArchive->files.size() * 35;
         }
 
         screenWidth = GetScreenWidth();
@@ -39,20 +45,106 @@ int main() {
 
         ClearBackground(RAYWHITE);
 
-        if (opened_archive.has_value()) {
-            scroll += GetMouseWheelMoveV().y * 4;
+        Vector2 mousePos = GetMousePosition();
+
+        if (openedArchive.has_value()) {
+            if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) {
+                const char * target_folder = tinyfd_selectFolderDialog("Save WAD contents to", nullptr);
+
+                if (target_folder) {
+                    fs::path folder = target_folder;
+                    for (auto [name, off]: openedArchive->files) {
+                        fs::path file = folder / name;
+
+                        fs::create_directories(file.parent_path());
+
+                        openedArchive->OpenFile(name)->WriteToDisk(file);
+                    }
+                }
+            }
+
+            scroll += GetMouseWheelMoveV().y * 8;
             if (scroll > 0) scroll = 0;
 
-            int height = scroll + 10;
-            for (auto [name, off] : opened_archive->files) {
-                DrawRectangleLines(10, height, screenWidth - 20, 30, BLACK);
-                DrawText(name.c_str(), 15, height + 5, 20, BLACK);
-                height += 35;
+            {
+                int height = scroll + 10;
+
+                int first_object = -scroll / 35;
+
+                auto i = openedArchive->files.begin();
+
+                if (first_object > 0)
+                    std::advance(i, first_object);
+
+                for (auto [name, off]: openedArchive->files) {
+                    if (height < -35) {
+                        height += 35;
+                        continue;
+                    }
+                    if (mousePos.y > (float) height && mousePos.y < (float) height + 30 &&
+                        mousePos.x < (float) screenWidth - 40) {
+                        DrawRectangle(10, height, screenWidth - 40, 30, GRAY);
+
+                        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                            fs::path file = name;
+                            std::string filename = file.filename().string();
+                            std::string exten = std::string("*") + file.extension().string();
+                            const char *patterns[] = {exten.c_str()};
+                            char *path = tinyfd_saveFileDialog("Save file from WAD",
+                                                               filename.c_str(),
+                                                               1, patterns,
+                                                               nullptr);
+                            if (path) {
+                                openedArchive->OpenFile(name)->WriteToDisk(path);
+                            }
+                        }
+                    }
+                    DrawRectangleLines(10, height, screenWidth - 40, 30, BLACK);
+                    DrawText(name.c_str(), 15, height + 5, 20, BLACK);
+
+                    if (height > screenHeight) break;
+
+                    height += 35;
+                }
             }
+
+            {
+                // Draw scrollbar
+                float perc = (float) -scroll / (float) totalHeight;
+
+                int pos = (int) (perc * (float) screenHeight);
+                int height = std::max(10, (int) (35.f / (float) totalHeight * (float) screenHeight));
+
+                DrawRectangle(screenWidth - 30, pos, 30, height, GRAY);
+
+                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+                    if (scrollbar) {
+                        scroll = -(mousePos.y / screenHeight * totalHeight);
+                    }
+                    if (mousePos.x > (float) screenWidth - 40 &&
+                        mousePos.y > (float) pos &&
+                        mousePos.y < (float) pos + (float) height) {
+                        scrollbar = true;
+                        scrollbarStart = mousePos;
+                    }
+                } else {
+                    scrollbar = false;
+                }
+            }
+        } else {
+            constexpr int fontSize = 30;
+
+            int width = MeasureText("Drop a .wad here", fontSize);
+            DrawText("Drop a .wad here",
+                     (int) (screenWidth / 2 - width / 2), (int) (screenHeight / 2 - fontSize / 2),
+                     fontSize,
+                     LIGHTGRAY);
         }
 
         EndDrawing();
     }
+
+    CloseWindow();
 
     return 0;
 }

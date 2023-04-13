@@ -9,12 +9,13 @@
 #include "File.h"
 
 #include <fstream>
+#include <utility>
 
 File::File(FileMetadata md, std::vector<uint8_t> data)
-    : metadata_(md), data_(std::move(data)) {
+        : metadata_(std::move(md)), data_(std::move(data)) {
 }
 
-void File::WriteToDisk(const std::string &filename) const {
+void File::WriteToDisk(const fs::path &filename) const {
     std::ofstream out(filename, std::ios::binary);
 
     if (!out.is_open()) return;
