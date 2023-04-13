@@ -72,7 +72,7 @@ int main() {
 
             scroll += (int) (GetMouseWheelMoveV().y * 35);
 
-            int size = files.size() - (int) (screenHeight / 35);
+            int size = std::max(0, (int) files.size() - (int) (screenHeight / 35));
 
             if (scroll > 0) scroll = 0;
             else if (scroll / 35 < -size)
