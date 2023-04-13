@@ -17,7 +17,7 @@
 #define ERROR(...) std::cerr << __VA_ARGS__ << std::endl
 
 Archive::Archive(fs::path ap)
-    : archive_file_(ap) {
+    : archive_file(ap) {
     DEBUG("Opening KIWAD archive at " << ap);
 
     std::string magic = ReadString(5);
@@ -35,12 +35,10 @@ Archive::Archive(fs::path ap)
         Read<uint8_t>(); // read null byte
     }
 
-    std::map<std::string, std::streamoff> files;
-
     for (uint32_t i = 0; i < file_count; i++) {
-        std::streamoff file_start = archive_file_.tellg();
+        std::streamoff file_start = archive_file.tellg();
         // skip offset (4B), uncompressed size (4B), compressed size (4B), compressed? (1B), checksum (4B)
-        archive_file_.seekg(0x11, std::ios_base::cur);
+        archive_file.seekg(0x11, std::ios_base::cur);
         auto file_name_len = Read<uint32_t>();
         std::string file_name = ReadString(file_name_len);
         file_name.pop_back(); // Null terminator
@@ -52,7 +50,7 @@ Archive::Archive(fs::path ap)
 }
 
 FileMetadata Archive::ReadMetadata(std::streamoff descriptor_offset) {
-    archive_file_.seekg(descriptor_offset, std::ios_base::beg);
+    archive_file.seekg(descriptor_offset, std::ios_base::beg);
 
     auto offset = Read<uint32_t>();
     auto size_uncompressed = Read<uint32_t>();
@@ -69,7 +67,7 @@ FileMetadata Archive::ReadMetadata(std::streamoff descriptor_offset) {
 }
 
 std::vector<uint8_t> Archive::ReadFile(const FileMetadata& metadata) {
-    archive_file_.seekg(metadata.data_offset, std::ios_base::beg);
+    archive_file.seekg(metadata.data_offset, std::ios_base::beg);
 
     std::vector<uint8_t> data;
     data.resize(metadata.uncompressed_size);
@@ -78,7 +76,7 @@ std::vector<uint8_t> Archive::ReadFile(const FileMetadata& metadata) {
         std::vector<uint8_t> compressed_data;
         compressed_data.resize(metadata.compressed_size);
 
-        archive_file_.read((char *) compressed_data.data(), metadata.compressed_size);
+        archive_file.read((char *) compressed_data.data(), metadata.compressed_size);
 
         uLongf s = metadata.uncompressed_size;
         int32_t err = uncompress(data.data(), &s, compressed_data.data(), metadata.compressed_size);
@@ -90,7 +88,7 @@ std::vector<uint8_t> Archive::ReadFile(const FileMetadata& metadata) {
             DEBUG("Loaded and uncompressed " << metadata.name);
         }
     } else {
-        archive_file_.read((char *) data.data(), metadata.uncompressed_size);
+        archive_file.read((char *) data.data(), metadata.uncompressed_size);
         DEBUG("Loaded " << metadata.name);
     }
 
@@ -98,12 +96,20 @@ std::vector<uint8_t> Archive::ReadFile(const FileMetadata& metadata) {
 }
 
 std::optional<File> Archive::OpenFile(const std::string &file_name) {
-    if (files_.count(file_name) == 0) {
+    if (files.count(file_name) == 0) {
         ERROR("Tried to open " << file_name << ", but file doesn't exist in archive");
         return {};
     }
 
-    std::streampos descriptor = files_.at(file_name);
+    std::streampos descriptor = files.at(file_name);
     FileMetadata metadata = ReadMetadata(descriptor);
     return {File(metadata, ReadFile(metadata))};
-} // merlin::wad
+}
+
+std::string Archive::ReadString(size_t n) {
+    std::string res;
+    res.resize(n);
+
+    archive_file.read(res.data(), n);
+    return res;
+}

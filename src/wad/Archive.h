@@ -23,18 +23,18 @@ namespace fs = std::filesystem;
 
 /// In-memory representation of a WAD Archive
 class Archive {
-    std::ifstream archive_file_;
+    std::ifstream archive_file;
 
-    uint32_t version_ = 0;
+public:
+    uint32_t version = 0;
     /// Offsets for each file in the archive
-    std::map<std::string, std::streamoff> files_{};
-
-    Archive(fs::path archive_path);
+    std::map<std::string, std::streamoff> files{};
 
     FileMetadata ReadMetadata(std::streamoff descriptor_offset);
     std::vector<uint8_t> ReadFile(const FileMetadata& metadata);
 
-public:
+    Archive(fs::path archive_path);
+
     static std::optional<Archive> Open(const std::string &archive_path);
 
     std::optional<File> OpenFile(const std::string &file_name);
@@ -68,20 +68,12 @@ T Archive::Read() {
 
     for (size_t i = 0; i < sizeof(T); i++) {
         uint8_t byte;
-        archive_file_.read((char *) &byte, 1);
+        archive_file.read((char *) &byte, 1);
 
         res |= ((typename SizedUint<sizeof(T)>::type) byte) << i * 8;
     }
 
     return *((T *) &res);
-}
-
-std::string Archive::ReadString(size_t n) {
-    std::string res;
-    res.resize(n);
-
-    archive_file_.read(res.data(), n);
-    return res;
 }
 
 template <class U>
