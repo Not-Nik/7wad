@@ -75,7 +75,7 @@ int WinMain(void *, void *, char *, int) {
                 }
             }
 
-            scroll += (int) (GetMouseWheelMoveV().y * 35);
+            scroll += (int) (GetMouseWheelMoveV().y * 17.5);
 
             int size = std::max(0, (int) files.size() - (int) (screenHeight / 35));
 
@@ -85,11 +85,11 @@ int WinMain(void *, void *, char *, int) {
 
             {
                 int first_object = -scroll / 35;
-                int height = 10;
+                int height = scroll % 35 + 10;
 
                 for (auto name = files.begin() + (int) first_object; name != files.end(); name++) {
                     if (mousePos.y > (float) height && mousePos.y < (float) height + 30 &&
-                        mousePos.x < (float) screenWidth - 40) {
+                        mousePos.x > 10 && mousePos.x < (float) screenWidth - 30) {
                         DrawRectangle(10, height, screenWidth - 40, 30, GRAY);
 
                         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -124,9 +124,9 @@ int WinMain(void *, void *, char *, int) {
                 int endPos = (int) (endPerc * (float) screenHeight);
                 int height = std::max(10, pos - endPos);
 
-                DrawRectangle(screenWidth - 30, pos, 30, height, GRAY);
+                DrawRectangle(screenWidth - 20, pos, 20, height, GRAY);
 
-                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && mousePos.x > (float) screenWidth - 40 &&
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && mousePos.x > (float) screenWidth - 20 &&
                     mousePos.y > (float) pos &&
                     mousePos.y < (float) pos + (float) height) {
                     scrollbar = true;
