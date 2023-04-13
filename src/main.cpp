@@ -15,7 +15,7 @@
 #ifdef _MSC_VER
 int WinMain(void *, void *, char *, int) {
 #else
-int main() {
+    int main() {
 #endif
     int screenWidth = 1080;
     int screenHeight = 720;
@@ -30,6 +30,7 @@ int main() {
     int scroll = 0;
     int totalHeight = 0;
     bool scrollbar = false;
+    float scrollbarOffset = 0;
 
     while (!WindowShouldClose()) {
         if (IsFileDropped()) {
@@ -39,7 +40,7 @@ int main() {
 
             UnloadDroppedFiles(droppedFiles);    // Unload filepaths from memory
 
-            totalHeight = openedArchive->files.size() * 35;
+            totalHeight = (int) openedArchive->files.size() * 35;
 
             files.clear();
             files.reserve(openedArchive->files.size());
@@ -60,7 +61,7 @@ int main() {
 
         if (openedArchive.has_value()) {
             if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) {
-                const char * target_folder = tinyfd_selectFolderDialog("Save WAD contents to", nullptr);
+                const char *target_folder = tinyfd_selectFolderDialog("Save WAD contents to", nullptr);
 
                 if (target_folder) {
                     fs::path folder = target_folder;
@@ -79,7 +80,7 @@ int main() {
             int size = std::max(0, (int) files.size() - (int) (screenHeight / 35));
 
             if (scroll > 0) scroll = 0;
-            else if (scroll / 35 < -size)
+            else if (scroll < -(size * 35))
                 scroll = -(size * 35);
 
             {
@@ -117,21 +118,23 @@ int main() {
             {
                 // Draw scrollbar
                 float perc = (float) -scroll / (float) totalHeight;
+                float endPerc = (float) (-scroll - screenHeight) / (float) totalHeight;
 
                 int pos = (int) (perc * (float) screenHeight);
-                int height = std::max(10, (int) (35.f / (float) totalHeight * (float) screenHeight));
+                int endPos = (int) (endPerc * (float) screenHeight);
+                int height = std::max(10, pos - endPos);
 
                 DrawRectangle(screenWidth - 30, pos, 30, height, GRAY);
 
-                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-                    if (scrollbar) {
-                        scroll = (int) -(mousePos.y / (float) screenHeight * (float) totalHeight);
-                    }
-                    if (mousePos.x > (float) screenWidth - 40 &&
-                        mousePos.y > (float) pos &&
-                        mousePos.y < (float) pos + (float) height) {
-                        scrollbar = true;
-                    }
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && mousePos.x > (float) screenWidth - 40 &&
+                    mousePos.y > (float) pos &&
+                    mousePos.y < (float) pos + (float) height) {
+                    scrollbar = true;
+
+                    scrollbarOffset = mousePos.y - (float) pos;
+
+                } else if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && scrollbar) {
+                    scroll = (int) -((mousePos.y - scrollbarOffset) / (float) screenHeight * (float) totalHeight);
                 } else {
                     scrollbar = false;
                 }
