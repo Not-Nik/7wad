@@ -13,10 +13,13 @@
 #include "wad/File.h"
 
 #ifdef _MSC_VER
-int WinMain(void *, void *, char *, int) {
+
+int WinMain(void *, void *, char *lpCmdLine, int) {
 #else
-    int main() {
+    int main(char **argv, int argc) {
 #endif
+
+
     int screenWidth = 1080;
     int screenHeight = 720;
 
@@ -31,6 +34,31 @@ int WinMain(void *, void *, char *, int) {
     int totalHeight = 0;
     bool scrollbar = false;
     float scrollbarOffset = 0;
+
+    std::string target;
+#ifdef _MSC_VER
+    target = lpCmdLine;
+
+    if (target.starts_with("\"") && target.ends_with("\"")) target = target.substr(1, target.size()-2);
+#else
+    if (argc >= 2) {
+        target = argc[1];
+    }
+#endif
+
+    if (!target.empty() && fs::exists(target)) {
+        openedArchive = Archive(target);
+
+        totalHeight = (int) openedArchive->files.size() * 35;
+
+        files.reserve(openedArchive->files.size());
+
+        for (auto [name, off]: openedArchive->files) {
+            files.push_back(name);
+        }
+    } else if (!target.empty()) {
+        tinyfd_messageBox("File does not exist", (target + " does not exist").c_str(), "ok", "error", 0);
+    }
 
     while (!WindowShouldClose()) {
         if (IsFileDropped()) {
@@ -75,7 +103,7 @@ int WinMain(void *, void *, char *, int) {
                 }
             }
 
-            scroll += (int) (GetMouseWheelMoveV().y * 17.5);
+            scroll += (int) (GetMouseWheelMoveV().y * 25);
 
             int size = std::max(0, (int) files.size() - (int) (screenHeight / 35));
 
