@@ -12,7 +12,11 @@
 #include "wad/Archive.h"
 #include "wad/File.h"
 
+#ifdef _MSC_VER
+int WinMain(void *, void *, char *, int) {
+#else
 int main() {
+#endif
     int screenWidth = 1080;
     int screenHeight = 720;
 

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 project(7wad)
 
 set(CMAKE_CXX_STANDARD 20)
+set(ZLIB_USE_STATIC_LIBS ON)
 
 find_package(ZLIB REQUIRED)
 add_subdirectory(raylib)
@@ -12,3 +13,11 @@ target_include_directories(tinyfiledialogs PUBLIC tinyfiledialogs)
 add_executable(7wad src/main.cpp src/wad/File.h src/wad/File.cpp src/wad/Archive.h src/wad/Archive.cpp)
 
 target_link_libraries(7wad ZLIB::ZLIB raylib tinyfiledialogs)
+
+if (WIN32)
+    if (MINGW)
+        target_link_options(7wad PRIVATE -mwindows)
+    elseif (MSVC)
+        target_link_options(7wad PRIVATE /SUBSYSTEM:WINDOWS /NODEFAULTLIB:library)
+    endif ()
+endif ()
