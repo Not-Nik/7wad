@@ -10,7 +10,13 @@ add_subdirectory(raylib)
 add_library(tinyfiledialogs STATIC tinyfiledialogs/tinyfiledialogs.c tinyfiledialogs/tinyfiledialogs.h)
 target_include_directories(tinyfiledialogs PUBLIC tinyfiledialogs)
 
-add_executable(7wad src/main.cpp src/wad/File.h src/wad/File.cpp src/wad/Archive.h src/wad/Archive.cpp)
+set(SOURCES src/main.cpp src/wad/File.h src/wad/File.cpp src/wad/Archive.h src/wad/Archive.cpp)
+
+if (WIN32 AND MSVC)
+    set(SOURCES ${SOURCES} 7wad.rc)
+endif()
+
+add_executable(7wad ${SOURCES})
 
 target_link_libraries(7wad ZLIB::ZLIB raylib tinyfiledialogs)
 
